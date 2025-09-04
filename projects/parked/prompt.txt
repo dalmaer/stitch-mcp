@@ -1,0 +1,1 @@
+A simple mobile app named "Parked" that helps users remember where they parked their car. With a single tap, users can log a predefined or custom location, such as a parking level (e.g. “P1”, “P2”) or a written description (“corner by elevator”).

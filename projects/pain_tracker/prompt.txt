@@ -1,0 +1,1 @@
+A pain management tracker that makes it really easy to add events when they happen. Have LLMs looking at the event data and suggesting correlations... patterns across time, sleep, etc.

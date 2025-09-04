@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link as="style" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Space+Grotesk%3Awght%40400%3B500%3B700" onload="this.rel='stylesheet'" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<title>Anagram Solver</title>
+<link href="data:image/x-icon;base64," rel="icon" type="image/x-icon"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style type="text/tailwindcss">
+      :root {
+        --primary-color: #4f46e5;}
+      body {
+        font-family: "Space Grotesk", "Noto Sans", sans-serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#111118] text-white">
+<div class="relative flex size-full min-h-screen flex-col justify-between overflow-x-hidden">
+<main class="flex-grow">
+<header class="flex items-center p-4">
+<button class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-white/10">
+<span class="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
+</button>
+<h1 class="flex-1 text-center text-xl font-bold tracking-tight pr-10">Anagram Solver</h1>
+</header>
+<div class="p-4 space-y-6">
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-gray-400 px-1" for="word-input">Enter word or phrase</label>
+<input class="form-input w-full resize-none rounded-xl border-2 border-[#292938] bg-[#1c1c26] p-4 text-lg placeholder:text-gray-500 focus:border-[var(--primary-color)] focus:ring-0" id="word-input" placeholder="e.g., listen" value=""/>
+</div>
+<button class="flex w-full cursor-pointer items-center justify-center rounded-xl h-14 px-4 bg-[var(--primary-color)] text-lg font-bold tracking-wide transition-colors hover:bg-indigo-500">
+<span>Solve</span>
+</button>
+</div>
+<div class="p-4">
+<h2 class="text-lg font-bold tracking-tight mb-4">Results</h2>
+<div class="space-y-2">
+<div class="flex items-center gap-4 rounded-lg bg-[#1c1c26] px-4 py-3"><p class="flex-1 truncate">aegnr</p></div>
+<div class="flex items-center gap-4 rounded-lg bg-[#1c1c26] px-4 py-3"><p class="flex-1 truncate">anger</p></div>
+<div class="flex items-center gap-4 rounded-lg bg-[#1c1c26] px-4 py-3"><p class="flex-1 truncate">range</p></div>
+<div class="flex items-center gap-4 rounded-lg bg-[#1c1c26] px-4 py-3"><p class="flex-1 truncate">regan</p></div>
+<div class="flex items-center gap-4 rounded-lg bg-[#1c1c26] px-4 py-3"><p class="flex-1 truncate">grane</p></div>
+</div>
+</div>
+</main>
+<footer class="sticky bottom-0">
+<nav class="flex border-t border-[#292938] bg-[#1c1c26]/80 backdrop-blur-sm px-4 pt-2 pb-4">
+<a class="flex flex-1 flex-col items-center justify-end gap-1.5 text-[var(--primary-color)]" href="#">
+<span class="material-symbols-outlined text-2xl">text_fields</span>
+<p class="text-xs font-semibold">Anagrams</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1.5 text-gray-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 0">history</span>
+<p class="text-xs font-medium">History</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1.5 text-gray-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 0">settings</span>
+<p class="text-xs font-medium">Settings</p>
+</a>
+</nav>
+</footer>
+</div>
+
+</body></html>

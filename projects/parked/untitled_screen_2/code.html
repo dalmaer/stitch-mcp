@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Parked</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .bg-custom-dark {
+            background-color: #111111;
+        }
+        .bg-custom-gray {
+            background-color: #1c1c1e;
+        }
+        .border-custom-gray {
+            border-color: #2c2c2e;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-custom-dark text-white">
+<div class="container mx-auto p-4 pt-8">
+<header class="text-center mb-8">
+<h1 class="text-4xl font-bold">Parked</h1>
+</header>
+<main>
+<section class="bg-custom-gray rounded-xl p-6 mb-8 text-center">
+<p class="text-gray-400 text-sm mb-2">Current Location</p>
+<h2 class="text-5xl font-semibold mb-2" id="current-location">P2</h2>
+<p class="text-gray-500 text-xs" id="timestamp">Saved: Just now</p>
+<div class="mt-4 flex justify-center space-x-4">
+<button class="text-blue-500 font-medium">Update</button>
+<button class="text-red-500 font-medium">Delete</button>
+</div>
+</section>
+<section class="mb-8">
+<h3 class="text-lg font-semibold mb-4 text-gray-300">Quick Save</h3>
+<div class="grid grid-cols-1 gap-3" id="quick-save-buttons">
+<button class="bg-custom-gray hover:bg-gray-700 text-white font-medium py-4 px-4 rounded-lg transition duration-300">P1</button>
+<button class="bg-custom-gray hover:bg-gray-700 text-white font-medium py-4 px-4 rounded-lg transition duration-300">P2</button>
+<button class="bg-custom-gray hover:bg-gray-700 text-white font-medium py-4 px-4 rounded-lg transition duration-300">P3</button>
+<button class="bg-custom-gray hover:bg-gray-700 text-white font-medium py-4 px-4 rounded-lg transition duration-300">Corner by elevator</button>
+</div>
+</section>
+<section>
+<h3 class="text-lg font-semibold mb-4 text-gray-300">Custom Location</h3>
+<div class="relative">
+<input class="w-full bg-custom-gray border border-custom-gray rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500" id="custom-location-input" placeholder="e.g., Near the entrance" type="text"/>
+</div>
+<button class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white text-lg font-bold py-4 rounded-lg shadow-lg transform active:scale-95 transition-transform duration-150 flex items-center justify-center">
+<span class="material-icons mr-2">local_parking</span>
+                    PARK
+                </button>
+</section>
+</main>
+<footer class="mt-12 text-center">
+<button class="text-gray-400 hover:text-white transition duration-300">
+<span class="material-icons">settings</span>
+<span class="sr-only">Manage Presets</span>
+</button>
+</footer>
+</div>
+
+</body></html>

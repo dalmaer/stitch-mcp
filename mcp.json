@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "stitch-mcp": {
+      "command": "node",
+      "args": [
+        "/Users/dionalmaer/code/stitch-mcp/dist/src/server.js"
+      ],
+      "env": {
+        "NODE_ENV": "production",
+        "PROJECTS_DIR": "/Users/dionalmaer/code/stitch-mcp/projects"
+      }
+    }
+  }
+}

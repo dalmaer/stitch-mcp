@@ -1,0 +1,27 @@
+{
+  "name": "stitch-mcp-debug",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal in-memory Stitch MCP server with tools + resources, plus a tiny CLI for debugging.",
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsx src/server.ts",
+    "start": "node dist/src/server.js",
+    "cli:list": "tsx src/server.ts list_projects",
+    "cli:search": "tsx src/server.ts search_projects checkout",
+    "cli:project": "tsx src/server.ts get_project parked",
+    "cli:screen": "tsx src/server.ts get_screen parked untitled_screen_1",
+    "cli:read": "tsx src/server.ts read_resource \"stitch:project/parked\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.5.0"
+  }
+}

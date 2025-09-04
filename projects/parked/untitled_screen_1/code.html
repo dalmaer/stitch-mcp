@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Parked</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;family=Orbitron:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        :root {
+            --ferrari-red: #D40000;
+            --carbon-fiber: #0A0A0A;
+            --brushed-metal: #333333;
+            --metal-highlight: #4a4a4a;
+        }
+        body {
+            font-family: 'Roboto Condensed', sans-serif;
+            min-height: max(884px, 100dvh);
+            background-color: var(--carbon-fiber);
+            background-image:
+                linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.02)),
+                linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.02));
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+        }
+        .brushed-metal-bg {
+            background-color: var(--brushed-metal);
+            background-image: linear-gradient(0deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .ferrari-red-glow {
+            box-shadow: 0 0 15px rgba(212, 0, 0, 0.6);
+        }
+        .font-orbitron {
+             font-family: 'Orbitron', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-white">
+<div class="container mx-auto p-4 pt-8">
+<header class="text-center mb-8">
+<h1 class="text-5xl font-orbitron font-bold text-white tracking-wider">Parked</h1>
+</header>
+<main>
+<section class="brushed-metal-bg rounded-xl p-6 mb-8 text-center border border-[var(--metal-highlight)] shadow-lg">
+<p class="text-gray-400 text-sm mb-2 uppercase tracking-widest">Current Location</p>
+<h2 class="text-6xl font-orbitron font-bold mb-2 text-[var(--ferrari-red)]" id="current-location">P2</h2>
+<p class="text-gray-400 text-xs" id="timestamp">Saved: Just now</p>
+<div class="mt-6 flex justify-center space-x-6">
+<button class="text-gray-300 font-bold tracking-wide hover:text-white transition-colors duration-300">Update</button>
+<button class="text-[var(--ferrari-red)] font-bold tracking-wide hover:text-red-400 transition-colors duration-300">Delete</button>
+</div>
+</section>
+<section class="mb-8">
+<h3 class="text-lg font-bold mb-4 text-gray-300 uppercase tracking-wider">Quick Save</h3>
+<div class="grid grid-cols-2 gap-4" id="quick-save-buttons">
+<button class="brushed-metal-bg border border-[var(--metal-highlight)] hover:border-[var(--ferrari-red)] text-white font-bold py-4 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">P1</button>
+<button class="brushed-metal-bg border border-[var(--metal-highlight)] hover:border-[var(--ferrari-red)] text-white font-bold py-4 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">P2</button>
+<button class="brushed-metal-bg border border-[var(--metal-highlight)] hover:border-[var(--ferrari-red)] text-white font-bold py-4 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">P3</button>
+<button class="brushed-metal-bg border border-[var(--metal-highlight)] hover:border-[var(--ferrari-red)] text-white font-bold py-4 px-4 rounded-lg transition-all duration-300 transform hover:scale-105">Corner by elevator</button>
+</div>
+</section>
+<section>
+<h3 class="text-lg font-bold mb-4 text-gray-300 uppercase tracking-wider">Custom Location</h3>
+<div class="relative">
+<input class="w-full brushed-metal-bg border-2 border-[var(--metal-highlight)] rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--carbon-fiber)] focus:ring-[var(--ferrari-red)] focus:border-[var(--ferrari-red)]" id="custom-location-input" placeholder="e.g., Near the main entrance" type="text"/>
+</div>
+<button class="mt-6 w-full bg-[var(--ferrari-red)] hover:bg-red-500 text-white text-xl font-bold py-4 rounded-lg ferrari-red-glow transform active:scale-95 transition-all duration-150 flex items-center justify-center tracking-widest uppercase">
+<span class="material-icons mr-2">directions_car</span>
+                Park
+            </button>
+</section>
+</main>
+<footer class="mt-12 text-center">
+</footer>
+</div>
+
+</body></html>
