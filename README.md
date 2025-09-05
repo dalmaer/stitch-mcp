@@ -42,3 +42,12 @@ ts-node src/server.ts read_resource "stitch:project/p_travel/screen/s1"
 - In-memory dataset with placeholder 1×1 PNG images
 - Optional `resources` with `stitch:` URIs
 - Trivial CLI for quick spot checks
+
+## Example Script
+
+What stitch projects do I have?
+
+Show me the screenshot of the anagram solver
+
+Can you generate a screen for a dog feeding tracking app?
+

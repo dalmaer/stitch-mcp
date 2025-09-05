@@ -6,9 +6,8 @@
         "tsx",
         "/Users/dionalmaer/code/stitch-mcp/src/server.ts"
       ],
-      "cwd": "/Users/dionalmaer/code/stitch-mcp",
       "env": {
-        "PROJECTS_DIR": "/Users/dionalmaer/code/stitch-mcp/projects"
+        "BASE_DIR": "/Users/dionalmaer/code/stitch-mcp"
       }
     }
   }

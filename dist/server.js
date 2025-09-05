@@ -1,7 +1,7 @@
 /**
- * Stitch MCP Server (Debug / In‑Memory + Resources Edition)
- * ---------------------------------------------------------
- * Minimal MCP server exposing tools + resource URIs backed by local sample data.
+ * Stitch MCP Server (Filesystem Edition)
+ * --------------------------------------
+ * MCP server that reads project data from the projects/ directory
  * Tools:
  *   - list_projects()
  *   - search_projects(query)
@@ -15,151 +15,104 @@
  *   npm run dev
  *
  * Debug CLI:
- *   ts-node src/server.ts list_projects
- *   ts-node src/server.ts search_projects "checkout"
- *   ts-node src/server.ts get_project p_travel
- *   ts-node src/server.ts get_screen p_parking s1
- *   ts-node src/server.ts read_resource "stitch:project/p_dogfed"
- *   ts-node src/server.ts read_resource "stitch:project/p_travel/screen/s1"
+ *   tsx src/server.ts list_projects
+ *   tsx src/server.ts search_projects "checkout"
+ *   tsx src/server.ts get_project parked
+ *   tsx src/server.ts get_screen parked untitled_screen_1
+ *   tsx src/server.ts read_resource "stitch:project/parked"
+ *
+ * With custom projects directory:
+ *   tsx src/server.ts --projects-dir /path/to/projects list_projects
+ *   tsx src/server.ts --projects-dir /path/to/projects get_project parked
+ *
+ * Environment variable (for MCP server mode):
+ *   BASE_DIR=/path/to/base npm run dev
+ *   # or legacy:
+ *   PROJECTS_DIR=/path/to/projects npm run dev
  */
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-// 1×1 PNG (transparent) placeholder
-const ONE_BY_ONE_PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==";
-const code = (language, value) => ({ language, value });
-const sampleProjects = [
-    {
-        id: "p_travel",
-        name: "Travel App",
-        prompt: "Clean iOS travel UI with flight search",
-        updatedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-        chat: [
-            { id: "m1", role: "user", content: "Design a flight search screen" },
-            { id: "m2", role: "assistant", content: "Here are three variants." },
-        ],
-        screens: [
-            {
-                id: "s1",
-                name: "Flight Search",
-                imageUrl: ONE_BY_ONE_PNG,
-                tags: ["search", "hero"],
-                code: [
-                    code("tsx", `export const FlightSearch = () => (
-  <div className="container">
-    <h1>Find Flights</h1>
-    <form>
-      <input placeholder="From" />
-      <input placeholder="To" />
-      <button>Search</button>
-    </form>
-  </div>
-);`),
-                    code("css", `.container{font-family:system-ui;max-width:480px;margin:0 auto;padding:16px}`),
-                ],
-            },
-            {
-                id: "s2",
-                name: "Results",
-                imageUrl: ONE_BY_ONE_PNG,
-                tags: ["results", "list"],
-                code: [code("tsx", `export const Results = () => <ul><li>Flight A</li></ul>;`)],
-            },
-        ],
-    },
-    {
-        id: "p_checkout",
-        name: "Shop Checkout",
-        prompt: "Checkout variants with address + card",
-        updatedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-        chat: [
-            { id: "m1", role: "user", content: "We need a single-page checkout" },
-            { id: "m2", role: "assistant", content: "Variant A uses a drawer for card details; Variant B uses inline sections." },
-        ],
-        screens: [
-            { id: "s1", name: "Checkout A", imageUrl: ONE_BY_ONE_PNG, tags: ["checkout", "drawer"], code: [code("html", `<main><h1>Checkout</h1><section>Address</section><section>Card</section></main>`)] },
-            { id: "s2", name: "Checkout B", imageUrl: ONE_BY_ONE_PNG, tags: ["checkout", "inline"] },
-            { id: "s3", name: "Confirmation", imageUrl: ONE_BY_ONE_PNG, tags: ["receipt"] },
-        ],
-    },
-    {
-        id: "p_onboarding",
-        name: "Onboarding Flow",
-        prompt: "3-step onboarding for mobile app",
-        updatedAt: new Date().toISOString(),
-        chat: [
-            { id: "m1", role: "system", content: "Use brand blue and rounded buttons" },
-            { id: "m2", role: "user", content: "Make step 2 ask for notifications" },
-        ],
-        screens: [
-            { id: "s1", name: "Welcome", imageUrl: ONE_BY_ONE_PNG, tags: ["step1"] },
-            { id: "s2", name: "Permissions", imageUrl: ONE_BY_ONE_PNG, tags: ["step2", "notifications"] },
-            { id: "s3", name: "Done", imageUrl: ONE_BY_ONE_PNG, tags: ["step3"] },
-        ],
-    },
-    // New samples
-    {
-        id: "p_parking",
-        name: "Parking App",
-        prompt: "Track where my car is parked with quick P-level presets and custom spots",
-        updatedAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-        chat: [
-            { id: "m1", role: "user", content: "I park at work on P1-P3; need fast capture" },
-            { id: "m2", role: "assistant", content: "Added large tap targets for P0–P3 and note field" },
-        ],
-        screens: [
-            {
-                id: "s1",
-                name: "Home",
-                imageUrl: ONE_BY_ONE_PNG,
-                tags: ["home", "quick-actions"],
-                code: [
-                    code("tsx", `export const Home = () => (
-  <div>
-    <h1>Where is my car?</h1>
-    <div className="grid">
-      {["P0","P1","P2","P3"].map(l => <button key={l}>{l}</button>)}
-    </div>
-    <input placeholder="Custom spot" />
-    <button>Save</button>
-  </div>
-);`),
-                ],
-            },
-            { id: "s2", name: "Saved", imageUrl: ONE_BY_ONE_PNG, tags: ["list", "history"] },
-        ],
-    },
-    {
-        id: "p_dogfed",
-        name: "Dog Fed?",
-        prompt: "Track if the dog has been fed (AM/PM toggles, family contributions)",
-        updatedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-        chat: [
-            { id: "m1", role: "user", content: "We keep double-feeding by accident. Need AM/PM toggles." },
-            { id: "m2", role: "assistant", content: "Added today card with AM/PM and contributors" },
-        ],
-        screens: [
-            {
-                id: "s1",
-                name: "Today",
-                imageUrl: ONE_BY_ONE_PNG,
-                tags: ["today", "toggles"],
-                code: [
-                    code("tsx", `export const Today = () => (
-  <section>
-    <h1>Dog Fed?</h1>
-    <label><input type="checkbox"/> AM</label>
-    <label><input type="checkbox"/> PM</label>
-    <small>Contributors: Dion, Emily</small>
-  </section>
-);`),
-                ],
-            },
-            { id: "s2", name: "History", imageUrl: ONE_BY_ONE_PNG, tags: ["history"] },
-        ],
-    },
-];
-// --------------
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+import fs from "fs";
+import path from "path";
+// ---------------------------
+// Filesystem Readers
+// ---------------------------
+let BASE_DIR = process.cwd();
+let PROJECTS_DIR = path.join(BASE_DIR, "projects");
+let IMAGES_DIR = path.join(BASE_DIR, "images");
+function setBaseDirectory(dir) {
+    BASE_DIR = dir;
+    PROJECTS_DIR = path.join(BASE_DIR, "projects");
+    IMAGES_DIR = path.join(BASE_DIR, "images");
+}
+function setProjectsDirectory(dir) {
+    PROJECTS_DIR = dir;
+}
+function setImagesDirectory(dir) {
+    IMAGES_DIR = dir;
+}
+function readProjectsFromFilesystem() {
+    const projects = [];
+    if (!fs.existsSync(PROJECTS_DIR)) {
+        return projects;
+    }
+    const projectDirs = fs.readdirSync(PROJECTS_DIR, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+    for (const projectDir of projectDirs) {
+        try {
+            const projectPath = path.join(PROJECTS_DIR, projectDir);
+            const promptPath = path.join(projectPath, "prompt.txt");
+            // Read prompt
+            let prompt = "";
+            if (fs.existsSync(promptPath)) {
+                prompt = fs.readFileSync(promptPath, "utf-8").trim();
+            }
+            // Read screens
+            const screens = [];
+            const entries = fs.readdirSync(projectPath, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const screenDir = entry.name;
+                    const screenPath = path.join(projectPath, screenDir);
+                    const codePath = path.join(screenPath, "code.html");
+                    const imagePath = path.join(screenPath, "screen.png");
+                    let code = "";
+                    if (fs.existsSync(codePath)) {
+                        code = fs.readFileSync(codePath, "utf-8");
+                    }
+                    const screen = {
+                        id: screenDir,
+                        name: screenDir.replace(/untitled_screen_/, "Screen ").replace(/_/g, " "),
+                        code,
+                        imageUrl: fs.existsSync(imagePath) ?
+                            `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/projects/${projectDir}/${screenDir}/screen.png` :
+                            undefined,
+                        updatedAt: fs.existsSync(codePath) ? fs.statSync(codePath).mtime.toISOString() : undefined,
+                    };
+                    screens.push(screen);
+                }
+            }
+            const projectStat = fs.statSync(projectPath);
+            const project = {
+                id: projectDir,
+                name: projectDir.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+                prompt,
+                screens,
+                updatedAt: projectStat.mtime.toISOString(),
+            };
+            projects.push(project);
+        }
+        catch (error) {
+            console.warn(`Failed to read project ${projectDir}:`, error);
+        }
+    }
+    return projects;
+}
+// ---------------------------
 // Tool Handlers
-// --------------
+// ---------------------------
 function toSummary(p) {
     return {
         id: p.id,
@@ -170,28 +123,35 @@ function toSummary(p) {
     };
 }
 function listProjectsImpl() {
-    const projects = sampleProjects.slice().sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")).map(toSummary);
+    const projects = readProjectsFromFilesystem()
+        .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))
+        .map(toSummary);
     return { projects };
 }
 function searchProjectsImpl(query) {
     const q = query.trim().toLowerCase();
     if (!q)
         return { projects: [] };
+    const allProjects = readProjectsFromFilesystem();
     const nameMatches = [];
-    const chatMatches = [];
-    for (const p of sampleProjects) {
-        const inName = p.name.toLowerCase().includes(q) || p.prompt.toLowerCase().includes(q);
-        const inChat = p.chat?.some(m => m.content.toLowerCase().includes(q));
-        if (inName)
+    const promptMatches = [];
+    for (const p of allProjects) {
+        const inName = p.name.toLowerCase().includes(q);
+        const inPrompt = p.prompt.toLowerCase().includes(q);
+        if (inName) {
             nameMatches.push(p);
-        else if (inChat)
-            chatMatches.push(p);
+        }
+        else if (inPrompt) {
+            promptMatches.push(p);
+        }
     }
-    const ranked = [...nameMatches, ...chatMatches].sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
+    const ranked = [...nameMatches, ...promptMatches]
+        .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
     return { projects: ranked.map(toSummary) };
 }
 function getProjectImpl(projectId) {
-    const found = sampleProjects.find(p => p.id === projectId);
+    const projects = readProjectsFromFilesystem();
+    const found = projects.find(p => p.id === projectId);
     if (!found) {
         const err = new Error("Project not found");
         err.code = "not_found";
@@ -201,82 +161,345 @@ function getProjectImpl(projectId) {
     return { project: found };
 }
 function getScreenImpl(projectId, screenId) {
-    const proj = sampleProjects.find(p => p.id === projectId);
-    if (!proj) {
-        const err = new Error("Project not found");
-        err.code = "not_found";
-        err.data = { projectId };
-        throw err;
-    }
-    const scr = proj.screens.find(s => s.id === screenId);
-    if (!scr) {
+    const { project } = getProjectImpl(projectId);
+    const screen = project.screens.find(s => s.id === screenId);
+    if (!screen) {
         const err = new Error("Screen not found");
         err.code = "not_found";
         err.data = { projectId, screenId };
         throw err;
     }
-    return { screen: scr };
+    return { screen };
+}
+function getScreenImageImpl(projectId, screenId) {
+    const { project } = getProjectImpl(projectId);
+    const screen = project.screens.find(s => s.id === screenId);
+    if (!screen) {
+        const err = new Error("Screen not found");
+        err.code = "not_found";
+        err.data = { projectId, screenId };
+        throw err;
+    }
+    if (!screen.imageUrl || !fs.existsSync(screen.imageUrl)) {
+        const err = new Error("Screen image not found");
+        err.code = "not_found";
+        err.data = { projectId, screenId, imagePath: screen.imageUrl };
+        throw err;
+    }
+    const imageBuffer = fs.readFileSync(screen.imageUrl);
+    const base64Image = imageBuffer.toString('base64');
+    const mimeType = screen.imageUrl.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    return {
+        image: base64Image,
+        mimeType
+    };
 }
 // -----------------
 // MCP Server Setup
 // -----------------
-const server = new Server({ name: "stitch-mcp-debug", version: "0.2.0" }, { capabilities: { tools: {}, resources: {} } });
-// Resources (if SDK supports registration this way)
-// @ts-ignore
-server.resource?.({ uriPattern: "stitch:project/{projectId}", name: "Stitch Project", mimeType: "application/json" }, async ({ uri, params }) => {
-    const { projectId } = params ?? {};
-    const { project } = getProjectImpl(String(projectId));
-    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(project, null, 2) }] };
+const server = new McpServer({
+    name: "stitch-mcp-debug",
+    version: "0.2.0"
 });
-// @ts-ignore
-server.resource?.({ uriPattern: "stitch:project/{projectId}/screen/{screenId}", name: "Stitch Screen", mimeType: "application/json" }, async ({ uri, params }) => {
-    const { projectId, screenId } = params ?? {};
-    const { screen } = getScreenImpl(String(projectId), String(screenId));
-    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(screen, null, 2) }] };
+// Resources
+server.registerResource("project", "stitch:project/{projectId}", {
+    title: "Stitch Project",
+    description: "Project detail including prompt and screens",
+    mimeType: "application/json"
+}, async (uri) => {
+    const match = uri.href.match(/^stitch:project\/([^\/]+)$/);
+    if (!match)
+        throw new Error("Invalid URI pattern");
+    const projectId = match[1];
+    const { project } = getProjectImpl(projectId);
+    return {
+        contents: [{
+                uri: uri.href,
+                mimeType: "application/json",
+                text: JSON.stringify(project, null, 2)
+            }]
+    };
+});
+server.registerResource("screen", "stitch:project/{projectId}/screen/{screenId}", {
+    title: "Stitch Screen",
+    description: "Screen asset by projectId and screenId",
+    mimeType: "application/json"
+}, async (uri) => {
+    const match = uri.href.match(/^stitch:project\/([^\/]+)\/screen\/([^\/]+)$/);
+    if (!match)
+        throw new Error("Invalid URI pattern");
+    const [, projectId, screenId] = match;
+    const { screen } = getScreenImpl(projectId, screenId);
+    return {
+        contents: [{
+                uri: uri.href,
+                mimeType: "application/json",
+                text: JSON.stringify(screen, null, 2)
+            }]
+    };
 });
 // Tools
-server.tool("list_projects", "List projects for the current (mock) user.", { type: "object", properties: {}, additionalProperties: false }, async () => ({ content: [{ type: "json", data: listProjectsImpl() }] }));
-server.tool("search_projects", "Search projects by query across name, prompt, and chat.", { type: "object", properties: { query: { type: "string", minLength: 1 } }, required: ["query"], additionalProperties: false }, async ({ query }) => ({ content: [{ type: "json", data: searchProjectsImpl(String(query)) }] }));
-server.tool("get_project", "Get project detail including chat and screens.", { type: "object", properties: { projectId: { type: "string", minLength: 1 } }, required: ["projectId"], additionalProperties: false }, async ({ projectId }) => ({ content: [{ type: "json", data: getProjectImpl(String(projectId)) }] }));
-server.tool("get_screen", "Get a single screen asset by projectId and screenId.", { type: "object", properties: { projectId: { type: "string", minLength: 1 }, screenId: { type: "string", minLength: 1 } }, required: ["projectId", "screenId"], additionalProperties: false }, async ({ projectId, screenId }) => ({ content: [{ type: "json", data: getScreenImpl(String(projectId), String(screenId)) }] }));
-// If running without CLI args, start as an MCP server (stdio). Otherwise run local CLI emulation.
+server.registerTool("list_projects", {
+    title: "List Projects",
+    description: "List projects from the projects/ directory.",
+    inputSchema: {}
+}, async () => ({
+    content: [{ type: "text", text: JSON.stringify(listProjectsImpl(), null, 2) }]
+}));
+server.registerTool("search_projects", {
+    title: "Search Projects",
+    description: "Search projects by query across name and prompt.",
+    inputSchema: { query: z.string().min(1) }
+}, async ({ query }) => ({
+    content: [{ type: "text", text: JSON.stringify(searchProjectsImpl(String(query)), null, 2) }]
+}));
+server.registerTool("get_project", {
+    title: "Get Project",
+    description: "Get project detail including prompt and screens.",
+    inputSchema: { projectId: z.string().min(1) }
+}, async ({ projectId }) => ({
+    content: [{ type: "text", text: JSON.stringify(getProjectImpl(String(projectId)), null, 2) }]
+}));
+server.registerTool("get_screen", {
+    title: "Get Screen",
+    description: "Get a single screen asset by projectId and screenId.",
+    inputSchema: {
+        projectId: z.string().min(1),
+        screenId: z.string().min(1)
+    }
+}, async ({ projectId, screenId }) => ({
+    content: [{ type: "text", text: JSON.stringify(getScreenImpl(String(projectId), String(screenId)), null, 2) }]
+}));
+server.registerTool("generate_screen", {
+    title: "Generate Screen",
+    description: "Generate a screen based on context. Types: parked, pain, anagram, dog. Returns first screen for projects or dog.png for dog type.",
+    inputSchema: {
+        type: z.enum(["parked", "pain", "anagram", "dog"]).describe("Screen type to generate based on context")
+    }
+}, async ({ type }) => {
+    const typeStr = String(type);
+    if (typeStr === "dog") {
+        // Return dog image
+        const dogImagePath = path.join(IMAGES_DIR, "dog.png");
+        if (!fs.existsSync(dogImagePath)) {
+            const err = new Error("Dog image not found");
+            err.code = "not_found";
+            err.data = { type: typeStr, imagePath: dogImagePath };
+            throw err;
+        }
+        const stats = fs.statSync(dogImagePath);
+        const fileSizeKB = stats.size / 1024;
+        const publicUrl = `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/images/dog.png`;
+        if (fileSizeKB > 100) {
+            return {
+                content: [{
+                        type: "text",
+                        text: `Dog image (${Math.round(fileSizeKB)}KB - too large for inline display):\n\n${publicUrl}\n\nClick the link above to view the image.`
+                    }]
+            };
+        }
+        const imageBuffer = fs.readFileSync(dogImagePath);
+        const base64Image = imageBuffer.toString('base64');
+        const mimeType = 'image/png';
+        return {
+            content: [
+                { type: "text", text: `Dog image (${Math.round(fileSizeKB)}KB):\n\nPublic URL: ${publicUrl}` },
+                { type: "image", data: base64Image, mimeType }
+            ]
+        };
+    }
+    // Map type to project ID
+    let projectId;
+    switch (typeStr) {
+        case "parked":
+            projectId = "parked";
+            break;
+        case "pain":
+            projectId = "pain_tracker";
+            break;
+        case "anagram":
+            projectId = "anagram_solver";
+            break;
+        default:
+            const err = new Error("Unknown screen type");
+            err.code = "invalid_type";
+            err.data = { type: typeStr };
+            throw err;
+    }
+    // Get the first screen from the project
+    const { project } = getProjectImpl(projectId);
+    if (project.screens.length === 0) {
+        const err = new Error("No screens found in project");
+        err.code = "no_screens";
+        err.data = { projectId, type: typeStr };
+        throw err;
+    }
+    const firstScreen = project.screens[0];
+    const localImagePath = path.join(PROJECTS_DIR, projectId, firstScreen.id, "screen.png");
+    if (!fs.existsSync(localImagePath)) {
+        const err = new Error("Screen image not found");
+        err.code = "not_found";
+        err.data = { projectId, screenId: firstScreen.id, imagePath: localImagePath };
+        throw err;
+    }
+    // Same logic as get_screen_image for the project screens
+    const stats = fs.statSync(localImagePath);
+    const fileSizeKB = stats.size / 1024;
+    const publicUrl = `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/projects/${projectId}/${firstScreen.id}/screen.png`;
+    if (fileSizeKB > 100) {
+        return {
+            content: [{
+                    type: "text",
+                    text: `Generated screen for ${typeStr} (${project.name} - ${firstScreen.name}) (${Math.round(fileSizeKB)}KB - too large for inline display):\n\n${publicUrl}\n\nClick the link above to view the screenshot.`
+                }]
+        };
+    }
+    const imageBuffer = fs.readFileSync(localImagePath);
+    const base64Image = imageBuffer.toString('base64');
+    const mimeType = 'image/png';
+    return {
+        content: [
+            { type: "text", text: `Generated screen for ${typeStr} (${project.name} - ${firstScreen.name}) (${Math.round(fileSizeKB)}KB):\n\nPublic URL: ${publicUrl}` },
+            { type: "image", data: base64Image, mimeType }
+        ]
+    };
+});
+server.registerTool("get_screen_image", {
+    title: "Get Screen Image",
+    description: "Get the screenshot image for a screen, displayed inline.",
+    inputSchema: {
+        projectId: z.string().min(1),
+        screenId: z.string().min(1)
+    }
+}, async ({ projectId, screenId }) => {
+    const { project } = getProjectImpl(String(projectId));
+    const screen = project.screens.find(s => s.id === String(screenId));
+    if (!screen) {
+        const err = new Error("Screen not found");
+        err.code = "not_found";
+        err.data = { projectId, screenId };
+        throw err;
+    }
+    // Get the local file path for reading the image
+    const localImagePath = path.join(PROJECTS_DIR, projectId, screenId, "screen.png");
+    if (!fs.existsSync(localImagePath)) {
+        const err = new Error("Screen image not found");
+        err.code = "not_found";
+        err.data = { projectId, screenId, imagePath: localImagePath };
+        throw err;
+    }
+    // Check file size before encoding (limit to ~100KB for inline display)
+    const stats = fs.statSync(localImagePath);
+    const fileSizeKB = stats.size / 1024;
+    const publicUrl = `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/projects/${projectId}/${screenId}/screen.png`;
+    if (fileSizeKB > 100) {
+        // File too large, return URL instead
+        return {
+            content: [{
+                    type: "text",
+                    text: `Screen image for ${projectId}/${screenId} (${Math.round(fileSizeKB)}KB - too large for inline display):\n\n${publicUrl}\n\nClick the link above to view the full-size screenshot.`
+                }]
+        };
+    }
+    // Read and encode the image for inline display
+    const imageBuffer = fs.readFileSync(localImagePath);
+    const base64Image = imageBuffer.toString('base64');
+    const mimeType = 'image/png';
+    return {
+        content: [
+            { type: "text", text: `Screen image for ${projectId}/${screenId} (${Math.round(fileSizeKB)}KB):\n\nPublic URL: ${publicUrl}` },
+            { type: "image", data: base64Image, mimeType }
+        ]
+    };
+});
+// CLI and main function
 const [, , cmd, ...args] = process.argv;
+// Parse CLI arguments
+function parseArgs(args) {
+    const parsed = { projectsDir: "", command: "", commandArgs: [] };
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === "--projects-dir" && i + 1 < args.length) {
+            parsed.projectsDir = args[i + 1];
+            i++; // skip the next argument since it's the value
+        }
+        else if (!parsed.command) {
+            parsed.command = args[i];
+        }
+        else {
+            parsed.commandArgs.push(args[i]);
+        }
+    }
+    return parsed;
+}
 async function main() {
-    if (!cmd) {
-        server.start();
+    const allArgs = [cmd, ...args].filter(Boolean);
+    const parsed = parseArgs(allArgs);
+    // Set projects directory if provided
+    if (parsed.projectsDir) {
+        setProjectsDirectory(parsed.projectsDir);
+    }
+    // Check if we should run as MCP server or CLI
+    if (!parsed.command) {
+        // Check for BASE_DIR environment variable first, then PROJECTS_DIR as fallback
+        const envBaseDir = process.env.BASE_DIR;
+        const envProjectsDir = process.env.PROJECTS_DIR;
+        if (envBaseDir) {
+            setBaseDirectory(envBaseDir);
+        }
+        else if (envProjectsDir) {
+            setProjectsDirectory(envProjectsDir);
+        }
+        const transport = new StdioServerTransport();
+        await server.connect(transport);
         return;
     }
     const out = (obj) => console.log(JSON.stringify(obj, null, 2));
-    switch (cmd) {
+    switch (parsed.command) {
         case "list_projects":
             out(listProjectsImpl());
             break;
         case "search_projects":
-            out(searchProjectsImpl(args.join(" ")));
+            out(searchProjectsImpl(parsed.commandArgs.join(" ")));
             break;
         case "get_project": {
-            const id = args[0];
+            const id = parsed.commandArgs[0];
             if (!id)
-                throw new Error("Usage: get_project <projectId>");
+                throw new Error("Usage: get_project [--projects-dir <path>] <projectId>");
             out(getProjectImpl(id));
             break;
         }
         case "get_screen": {
-            const [pid, sid] = args;
+            const [pid, sid] = parsed.commandArgs;
             if (!pid || !sid)
-                throw new Error("Usage: get_screen <projectId> <screenId>");
+                throw new Error("Usage: get_screen [--projects-dir <path>] <projectId> <screenId>");
             out(getScreenImpl(pid, sid));
             break;
         }
+        case "get_screen_image": {
+            const [pid, sid] = parsed.commandArgs;
+            if (!pid || !sid)
+                throw new Error("Usage: get_screen_image [--projects-dir <path>] <projectId> <screenId>");
+            out(getScreenImageImpl(pid, sid));
+            break;
+        }
+        case "generate_screen": {
+            const [type] = parsed.commandArgs;
+            if (!type)
+                throw new Error("Usage: generate_screen [--projects-dir <path>] <type>");
+            // This would require implementing the full tool logic for CLI
+            console.error("generate_screen CLI support not fully implemented - use MCP server mode");
+            process.exit(1);
+        }
         case "read_resource": {
-            const [uri] = args;
+            const [uri] = parsed.commandArgs;
             if (!uri)
-                throw new Error("Usage: read_resource <uri>");
+                throw new Error("Usage: read_resource [--projects-dir <path>] <uri>");
             out(readResourceUri(uri));
             break;
         }
         default:
-            console.error("Unknown command");
+            console.error("Unknown command. Available commands: list_projects, search_projects, get_project, get_screen, get_screen_image, generate_screen, read_resource");
+            console.error("Options: --projects-dir <path>");
             process.exit(1);
     }
 }

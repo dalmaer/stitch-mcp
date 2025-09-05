@@ -26,6 +26,8 @@
  *   tsx src/server.ts --projects-dir /path/to/projects get_project parked
  * 
  * Environment variable (for MCP server mode):
+ *   BASE_DIR=/path/to/base npm run dev
+ *   # or legacy:
  *   PROJECTS_DIR=/path/to/projects npm run dev
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -68,10 +70,22 @@ interface ProjectDetail {
 // Filesystem Readers
 // ---------------------------
 
-let PROJECTS_DIR = "projects";
+let BASE_DIR = process.cwd();
+let PROJECTS_DIR = path.join(BASE_DIR, "projects");
+let IMAGES_DIR = path.join(BASE_DIR, "images");
+
+function setBaseDirectory(dir: string) {
+  BASE_DIR = dir;
+  PROJECTS_DIR = path.join(BASE_DIR, "projects");
+  IMAGES_DIR = path.join(BASE_DIR, "images");
+}
 
 function setProjectsDirectory(dir: string) {
   PROJECTS_DIR = dir;
+}
+
+function setImagesDirectory(dir: string) {
+  IMAGES_DIR = dir;
 }
 
 function readProjectsFromFilesystem(): ProjectDetail[] {
@@ -116,7 +130,9 @@ function readProjectsFromFilesystem(): ProjectDetail[] {
             id: screenDir,
             name: screenDir.replace(/untitled_screen_/, "Screen ").replace(/_/g, " "),
             code,
-            imageUrl: fs.existsSync(imagePath) ? path.relative(process.cwd(), imagePath) : undefined,
+            imageUrl: fs.existsSync(imagePath) ? 
+              `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/projects/${projectDir}/${screenDir}/screen.png` : 
+              undefined,
             updatedAt: fs.existsSync(codePath) ? fs.statSync(codePath).mtime.toISOString() : undefined,
           };
           screens.push(screen);
@@ -351,10 +367,116 @@ server.registerTool(
 );
 
 server.registerTool(
+  "generate_screen",
+  {
+    title: "Generate Screen",
+    description: "Generate a screen based on context. Types: parked, pain, anagram, dog. Returns first screen for projects or dog.png for dog type.",
+    inputSchema: { 
+      type: z.enum(["parked", "pain", "anagram", "dog"]).describe("Screen type to generate based on context")
+    }
+  },
+  async ({ type }) => {
+    const typeStr = String(type);
+    
+    if (typeStr === "dog") {
+      // Return dog image
+      const dogImagePath = path.join(IMAGES_DIR, "dog.png");
+      if (!fs.existsSync(dogImagePath)) {
+        const err: any = new Error("Dog image not found");
+        err.code = "not_found";
+        err.data = { type: typeStr, imagePath: dogImagePath };
+        throw err;
+      }
+      
+      const stats = fs.statSync(dogImagePath);
+      const fileSizeKB = stats.size / 1024;
+      const publicUrl = `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/images/dog.png`;
+      
+      if (fileSizeKB > 100) {
+        return {
+          content: [{ 
+            type: "text", 
+            text: `Dog image (${Math.round(fileSizeKB)}KB - too large for inline display):\n\n${publicUrl}\n\nClick the link above to view the image.` 
+          }]
+        };
+      }
+      
+      const imageBuffer = fs.readFileSync(dogImagePath);
+      const base64Image = imageBuffer.toString('base64');
+      const mimeType = 'image/png';
+      
+      return {
+        content: [
+          { type: "text", text: `Dog image (${Math.round(fileSizeKB)}KB):\n\nPublic URL: ${publicUrl}` },
+          { type: "image", data: base64Image, mimeType }
+        ]
+      };
+    }
+    
+    // Map type to project ID
+    let projectId: string;
+    switch (typeStr) {
+      case "parked": projectId = "parked"; break;
+      case "pain": projectId = "pain_tracker"; break;
+      case "anagram": projectId = "anagram_solver"; break;
+      default:
+        const err: any = new Error("Unknown screen type");
+        err.code = "invalid_type";
+        err.data = { type: typeStr };
+        throw err;
+    }
+    
+    // Get the first screen from the project
+    const { project } = getProjectImpl(projectId);
+    if (project.screens.length === 0) {
+      const err: any = new Error("No screens found in project");
+      err.code = "no_screens";
+      err.data = { projectId, type: typeStr };
+      throw err;
+    }
+    
+    const firstScreen = project.screens[0];
+    const localImagePath = path.join(PROJECTS_DIR, projectId, firstScreen.id, "screen.png");
+    
+    if (!fs.existsSync(localImagePath)) {
+      const err: any = new Error("Screen image not found");
+      err.code = "not_found";
+      err.data = { projectId, screenId: firstScreen.id, imagePath: localImagePath };
+      throw err;
+    }
+    
+    // Same logic as get_screen_image for the project screens
+    const stats = fs.statSync(localImagePath);
+    const fileSizeKB = stats.size / 1024;
+    const publicUrl = `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/projects/${projectId}/${firstScreen.id}/screen.png`;
+    
+    if (fileSizeKB > 100) {
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Generated screen for ${typeStr} (${project.name} - ${firstScreen.name}) (${Math.round(fileSizeKB)}KB - too large for inline display):\n\n${publicUrl}\n\nClick the link above to view the screenshot.` 
+        }]
+      };
+    }
+    
+    const imageBuffer = fs.readFileSync(localImagePath);
+    const base64Image = imageBuffer.toString('base64');
+    const mimeType = 'image/png';
+    
+    return {
+      content: [
+        { type: "text", text: `Generated screen for ${typeStr} (${project.name} - ${firstScreen.name}) (${Math.round(fileSizeKB)}KB):\n\nPublic URL: ${publicUrl}` },
+        { type: "image", data: base64Image, mimeType }
+      ]
+    };
+  }
+);
+
+server.registerTool(
   "get_screen_image",
   {
-    title: "Get Screen Image Path",
-    description: "Get the file path to the screenshot image for a screen. Use the Read tool to view the image.",
+    title: "Get Screen Image",
+    description: "Get the screenshot image for a screen, displayed inline.",
     inputSchema: { 
       projectId: z.string().min(1), 
       screenId: z.string().min(1) 
@@ -371,18 +493,41 @@ server.registerTool(
       throw err;
     }
     
-    if (!screen.imageUrl || !fs.existsSync(screen.imageUrl)) {
+    // Get the local file path for reading the image
+    const localImagePath = path.join(PROJECTS_DIR, projectId, screenId, "screen.png");
+    
+    if (!fs.existsSync(localImagePath)) {
       const err: any = new Error("Screen image not found");
       err.code = "not_found";
-      err.data = { projectId, screenId, imagePath: screen.imageUrl };
+      err.data = { projectId, screenId, imagePath: localImagePath };
       throw err;
     }
     
+    // Check file size before encoding (limit to ~100KB for inline display)
+    const stats = fs.statSync(localImagePath);
+    const fileSizeKB = stats.size / 1024;
+    const publicUrl = `https://raw.githubusercontent.com/dalmaer/stitch-mcp/main/projects/${projectId}/${screenId}/screen.png`;
+    
+    if (fileSizeKB > 100) {
+      // File too large, return URL instead
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Screen image for ${projectId}/${screenId} (${Math.round(fileSizeKB)}KB - too large for inline display):\n\n${publicUrl}\n\nClick the link above to view the full-size screenshot.` 
+        }]
+      };
+    }
+    
+    // Read and encode the image for inline display
+    const imageBuffer = fs.readFileSync(localImagePath);
+    const base64Image = imageBuffer.toString('base64');
+    const mimeType = 'image/png';
+    
     return {
-      content: [{ 
-        type: "text", 
-        text: `Screen image path: ${screen.imageUrl}\n\nUse the Read tool to view this image file.` 
-      }]
+      content: [
+        { type: "text", text: `Screen image for ${projectId}/${screenId} (${Math.round(fileSizeKB)}KB):\n\nPublic URL: ${publicUrl}` },
+        { type: "image", data: base64Image, mimeType }
+      ]
     };
   }
 );
@@ -419,9 +564,13 @@ async function main() {
   
   // Check if we should run as MCP server or CLI
   if (!parsed.command) {
-    // Check for PROJECTS_DIR environment variable as fallback
+    // Check for BASE_DIR environment variable first, then PROJECTS_DIR as fallback
+    const envBaseDir = process.env.BASE_DIR;
     const envProjectsDir = process.env.PROJECTS_DIR;
-    if (envProjectsDir) {
+    
+    if (envBaseDir) {
+      setBaseDirectory(envBaseDir);
+    } else if (envProjectsDir) {
       setProjectsDirectory(envProjectsDir);
     }
     
@@ -452,6 +601,13 @@ async function main() {
       out(getScreenImageImpl(pid, sid)); 
       break;
     }
+    case "generate_screen": {
+      const [type] = parsed.commandArgs; 
+      if (!type) throw new Error("Usage: generate_screen [--projects-dir <path>] <type>");
+      // This would require implementing the full tool logic for CLI
+      console.error("generate_screen CLI support not fully implemented - use MCP server mode");
+      process.exit(1);
+    }
     case "read_resource": {
       const [uri] = parsed.commandArgs; 
       if (!uri) throw new Error("Usage: read_resource [--projects-dir <path>] <uri>");
@@ -459,7 +615,7 @@ async function main() {
       break;
     }
     default:
-      console.error("Unknown command. Available commands: list_projects, search_projects, get_project, get_screen, read_resource");
+      console.error("Unknown command. Available commands: list_projects, search_projects, get_project, get_screen, get_screen_image, generate_screen, read_resource");
       console.error("Options: --projects-dir <path>");
       process.exit(1);
   }
